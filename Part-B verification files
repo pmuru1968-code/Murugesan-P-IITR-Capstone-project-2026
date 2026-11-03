@@ -1,0 +1,4 @@
+import pandas as pd
+display(pd.read_csv("outputs/part_b_metrics.csv"))
+display(pd.read_csv("outputs/part_b_tree_depth.csv"))
+display(pd.read_csv("outputs/part_b_cv.csv"))
