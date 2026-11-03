@@ -1,0 +1,7 @@
+!python part_d_segments.py
+import pandas as pd
+display(pd.read_csv("outputs/hub_profile.csv").head())
+display(pd.read_csv("outputs/part_d_separation.csv"))
+display(pd.read_csv("outputs/hub_segments.csv"))
+display(pd.read_csv("outputs/segment_profile.csv"))
+display(pd.read_csv("outputs/tier_vs_segment_mismatch.csv"))
