@@ -1,0 +1,51 @@
+import pandas as pd
+import numpy as np
+
+# Reload raw_ship_df using the correct relative path
+raw_ship_df = pd.read_csv("data/raw_shipments.csv")
+
+raw_ship_df = raw_ship_df.drop_duplicates()
+sentinel_count = (
+   raw_ship_df["parcel_weight_kg"] > 100
+).sum()
+
+raw_ship_df.loc[
+    raw_ship_df ["parcel_weight_kg"] > 100,
+    "parcel_weight_kg"
+] = np.nan
+
+raw_ship_df["declared_value_inr"] = (
+    raw_ship_df["declared_value"]
+    .str.replace(" ", "", regex=False)
+    .str.replace(" ", "", regex=False)
+    .str.replace(" ", "", regex=False)
+    .str.replace("•", "", regex=False)
+    .str.replace(" ", "", regex=False)
+    .str.replace(" ", "", regex=False)
+    .str.replace("\u20b9", "", regex=True)
+    .str.replace(",", "", regex=False)
+    .astype(float)
+)
+
+raw_ship_df = raw_ship_df.drop(
+    columns=["declared_value"]
+)
+
+medians = {
+    "distance_km":
+        round(float(raw_ship_df["distance_km"].median()), 2),
+
+    "parcel_weight_kg":
+        round(float(raw_ship_df["parcel_weight_kg"].median()), 2),
+
+    "declared_value_inr":
+        round(float(raw_ship_df["declared_value_inr"].median()), 2)
+}
+
+print(medians)
+
+times = raw_ship_df["dispatch_time"]
+times = pd.to_datetime(times)
+
+print(times)
+print(times.dt.hour)
