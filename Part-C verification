@@ -1,0 +1,8 @@
+import pandas as pd
+display(pd.read_csv("outputs/part_c_models.csv"))
+display(pd.read_csv("outputs/part_c_feature_scores.csv").head(10))
+display(pd.read_csv("outputs/part_c_selectk.csv"))
+display(pd.read_csv("outputs/part_c_tuning.csv"))
+display(pd.read_csv("outputs/part_c_thresholds.csv"))
+display(pd.read_csv("outputs/part_c_final_test.csv"))
+display(pd.read_csv("outputs/part_c_final_config.csv"))
