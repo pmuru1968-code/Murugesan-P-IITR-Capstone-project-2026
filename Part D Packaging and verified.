@@ -1,0 +1,84 @@
+import os
+import numpy as np
+import pandas as pd
+import joblib
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.feature_selection import SelectKBest, f_classif
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.pipeline import Pipeline
+
+# 1. Load Data and Rebuild Split
+modelling_df = pd.read_csv("data/modelling_table.csv")
+
+FEATURES = [
+    "promised_hours", "distance_km", "parcel_weight_kg", "log_declared_value",
+    "n_stops", "rain_flag", "sale_event_flag", "is_cod", "is_weekend", "dispatch_hour",
+    "hub_tier", "hub_daily_capacity", "label_print_batch", "scanner_build_no",
+    "tape_roll_no", "sticker_serial_mod", "shelf_slot_no"
+]
+TARGET = "is_delayed"
+
+X = modelling_df[FEATURES]
+y = modelling_df[TARGET]
+
+X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42, stratify=y)
+X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42, stratify=y_temp)
+
+# 2. Get saved configurations
+final_config = pd.read_csv("outputs/part_c_final_config.csv").iloc[0]
+chosen_from = final_config["chosen_from"]
+threshold = float(final_config["threshold"])
+
+# Re-instantiate final parameters
+final_params = {}
+if chosen_from != "default_forest_same_7_features":
+    # Evaluate parameters safely
+    import ast
+    tuning_df = pd.read_csv("outputs/part_c_tuning.csv")
+    best_p_str = tuning_df[tuning_df["search"] == chosen_from].iloc[0]["best_params"]
+    final_params = ast.literal_eval(best_p_str)
+
+# Build and fit pipeline on stratified training data
+final_pipe = Pipeline([
+    ("selector", SelectKBest(f_classif, k=7)),
+    ("model", RandomForestClassifier(random_state=42, **final_params))
+])
+final_pipe.fit(X_train, y_train)
+
+# 3. Save Artifacts
+os.makedirs("models", exist_ok=True)
+joblib.dump(final_pipe, "models/delay_model.pkl")
+
+pd.DataFrame({"threshold": [threshold]}).to_csv("models/delay_threshold.csv", index=False)
+pd.DataFrame({"feature": FEATURES}).to_csv("models/feature_order.csv", index=False)
+
+# Get computed medians from checks
+checks_df = pd.read_csv("outputs/part_a_checks.csv")
+med_dist = float(checks_df[checks_df["metric"] == "median_distance_km"].iloc[0]["value"])
+med_weight = float(checks_df[checks_df["metric"] == "median_parcel_weight_kg"].iloc[0]["value"])
+med_val = float(checks_df[checks_df["metric"] == "median_declared_value_inr"].iloc[0]["value"])
+
+impute_values = pd.DataFrame([
+    {"column": "distance_km", "median": med_dist},
+    {"column": "parcel_weight_kg", "median": med_weight},
+    {"column": "declared_value_inr", "median": med_val}
+])
+impute_values.to_csv("models/impute_values.csv", index=False)
+
+# 4. Reload and Verify Check
+reloaded_pipe = joblib.load("models/delay_model.pkl")
+
+probs_orig = final_pipe.predict_proba(X_test)[:, 1]
+probs_reload = reloaded_pipe.predict_proba(X_test)[:, 1]
+
+max_diff = np.max(np.abs(probs_orig - probs_reload))
+
+reload_check_df = pd.DataFrame([
+    {"metric": "test_rows_scored", "value": len(X_test)},
+    {"metric": "reload_max_abs_probability_diff", "value": float(max_diff)},
+    {"metric": "threshold", "value": threshold}
+])
+reload_check_df.to_csv("outputs/part_d_reload_check.csv", index=False)
+
+print("Part D Packaging complete and verified.")
