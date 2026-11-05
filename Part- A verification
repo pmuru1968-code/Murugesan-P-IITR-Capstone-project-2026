@@ -1,4 +1,5 @@
 # Verify the outputs were generated properly
 import pandas as pd
 checks = pd.read_csv("outputs/part_a_checks.csv")
+!python part_a_clean_eda.py
 display(checks)
